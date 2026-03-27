@@ -124,12 +124,6 @@
 
 <div class="container">
 
-  <div class="notice">
-    <strong>⚠ ご注意：</strong>
-    表示価格はすべて参考値（税抜）です。実際の損害額算定には現地調査・専門鑑定人の判断が必要です。
-    根拠サイトリンクから最新の市場相場を必ずご確認ください。
-  </div>
-
   <!-- ===== 施工単価テーブル ===== -->
   <div class="card">
     <div class="card-title">
@@ -172,6 +166,12 @@
       <button id="searchBtn" class="search-btn" onclick="doSearch()">検索</button>
     </div>
     <div class="search-hint">※「施工単価 費用 単価表」を自動付加してGoogle検索を別タブで開きます</div>
+  </div>
+
+  <div class="notice">
+    <strong>⚠ ご注意：</strong>
+    表示価格はすべて参考値（税抜）です。実際の損害額算定には現地調査・専門鑑定人の判断が必要です。
+    根拠サイトリンクから最新の市場相場を必ずご確認ください。
   </div>
 
 </div>
@@ -404,11 +404,6 @@ const STANDARD_PRICES = {
 // ============================================================
 function buildCatButtons() {
   const container = document.getElementById('catBtns');
-  const allBtn = document.createElement('button');
-  allBtn.className = 'cat-btn active';
-  allBtn.textContent = 'すべて';
-  allBtn.onclick = () => loadCat('', allBtn);
-  container.appendChild(allBtn);
 
   Object.keys(STANDARD_PRICES).forEach(cat => {
     const btn = document.createElement('button');
@@ -417,6 +412,13 @@ function buildCatButtons() {
     btn.onclick = () => loadCat(cat, btn);
     container.appendChild(btn);
   });
+
+  // 「すべて」は末尾に配置
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cat-btn';
+  allBtn.textContent = 'すべて';
+  allBtn.onclick = () => loadCat('', allBtn);
+  container.appendChild(allBtn);
 }
 
 // ============================================================
@@ -480,7 +482,8 @@ function doSearch() {
 // 初期化
 // ============================================================
 buildCatButtons();
-loadCat('', document.querySelector('.cat-btn'));
+const firstBtn = document.querySelector('.cat-btn');
+loadCat('屋根工事', firstBtn);
 </script>
 </body>
 </html>
