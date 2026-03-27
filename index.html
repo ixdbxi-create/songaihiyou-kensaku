@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>火災保険 損害鑑定 価格検索システム</title>
+<style>
+  :root {
+    --primary: #1a3a5c;
+    --accent:  #e85c2a;
+    --bg:      #f4f6f9;
+    --card:    #ffffff;
+    --border:  #d0d7e2;
+    --text:    #2c3e50;
+    --muted:   #6c7a89;
+    --success: #27ae60;
+    --warn:    #e67e22;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Meiryo','Hiragino Sans',sans-serif; background: var(--bg); color: var(--text); }
+
+  header {
+    background: var(--primary); color: #fff;
+    padding: 12px 18px; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2); flex-wrap: wrap; gap: 8px;
+  }
+  header h1 { font-size: 1.1rem; font-weight: bold; letter-spacing: .03em; }
+  header .sub { font-size: .72rem; opacity: .75; margin-top: 3px; }
+  .badge { background: var(--accent); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: .72rem; font-weight: bold; white-space: nowrap; }
+
+  .container { max-width: 1280px; margin: 0 auto; padding: 16px 14px; }
+
+  .notice {
+    background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px;
+    padding: 9px 14px; font-size: .78rem; color: #795548; margin-bottom: 14px; line-height: 1.6;
+  }
+  .notice strong { color: #e65100; }
+
+  /* カード */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.06); margin-bottom: 16px; }
+  .card-title {
+    font-size: .97rem; color: var(--primary);
+    border-left: 4px solid var(--accent); padding-left: 10px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+
+  /* カテゴリボタン */
+  .cat-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .cat-btn {
+    padding: 6px 13px; border: 2px solid var(--primary); background: transparent;
+    color: var(--primary); border-radius: 20px; cursor: pointer; font-size: .78rem;
+    transition: all .2s; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .cat-btn:hover, .cat-btn.active { background: var(--primary); color: #fff; }
+
+  /* 根拠サイトバッジ */
+  .src-links { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .src-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 14px;
+    background: #e8f0fe; color: #1a3a5c;
+    font-size: .73rem; text-decoration: none; border: 1px solid #b8caf5;
+    transition: background .15s; touch-action: manipulation;
+  }
+  .src-link:hover { background: #c5d8ff; }
+  .src-link::after { content: "↗"; font-size: .68rem; opacity: .7; }
+
+  /* テーブルラッパー */
+  .tbl-wrap { max-height: 500px; overflow-y: auto; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: .84rem; }
+  th { background: var(--primary); color: #fff; padding: 8px 10px; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  tr:hover td { background: #f0f4fb; }
+  .price-val { font-weight: bold; color: var(--accent); white-space: nowrap; }
+  .cat-badge { background: #e8eef6; padding: 2px 8px; border-radius: 10px; font-size: .73rem; white-space: nowrap; }
+  .note-cell { font-size: .76rem; color: var(--muted); }
+
+  .stat { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+
+  /* 工事名検索 */
+  .search-row { display: flex; gap: 8px; align-items: stretch; flex-wrap: nowrap; }
+  .search-input {
+    flex: 1; min-width: 0; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 6px; font-size: .9rem;
+    outline: none; transition: border .2s; -webkit-appearance: none;
+  }
+  .search-input:focus { border-color: var(--primary); }
+  .search-btn {
+    padding: 10px 20px; background: var(--primary); color: #fff;
+    border: none; border-radius: 6px; cursor: pointer; font-size: .88rem;
+    white-space: nowrap; transition: background .2s;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  .search-btn:hover { background: #254d7a; }
+  .search-btn:active { background: #1a3a5c; }
+  .search-hint { font-size: .73rem; color: var(--muted); margin-top: 6px; }
+
+  footer { text-align: center; padding: 16px; font-size: .7rem; color: var(--muted); border-top: 1px solid var(--border); margin-top: 8px; }
+
+  /* モバイル最適化 */
+  @media (max-width: 600px) {
+    header h1 { font-size: .95rem; }
+    .card { padding: 14px 12px; }
+    .cat-btn { padding: 6px 10px; font-size: .75rem; }
+    th, td { padding: 6px 8px; font-size: .78rem; }
+    .tbl-wrap { max-height: 400px; }
+    .search-btn { padding: 10px 14px; font-size: .82rem; }
+  }
+  @media (max-width: 400px) {
+    .container { padding: 12px 10px; }
+    header { padding: 10px 14px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🔥 火災保険 損害鑑定 価格検索システム</h1>
+    <div class="sub">標準施工単価・根拠サイト参照 | 参考価格表示</div>
+  </div>
+  <span class="badge">参考価格表示</span>
+</header>
+
+<div class="container">
+
+  <div class="notice">
+    <strong>⚠ ご注意：</strong>
+    表示価格はすべて参考値（税抜）です。実際の損害額算定には現地調査・専門鑑定人の判断が必要です。
+    根拠サイトリンクから最新の市場相場を必ずご確認ください。
+  </div>
+
+  <!-- ===== 施工単価テーブル ===== -->
+  <div class="card">
+    <div class="card-title">
+      📋 標準施工単価テーブル（参考値・税抜）
+      <span id="statLabel" class="stat"></span>
+    </div>
+
+    <div class="cat-btns" id="catBtns"></div>
+
+    <!-- 根拠サイトリンク表示エリア -->
+    <div class="src-links" id="srcLinks"></div>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:100px">カテゴリ</th>
+            <th>品目・工事内容</th>
+            <th style="width:42px;text-align:center">単位</th>
+            <th style="width:90px">下限（円）</th>
+            <th style="width:90px">上限（円）</th>
+            <th>備考</th>
+          </tr>
+        </thead>
+        <tbody id="stdBody">
+          <tr><td colspan="6" style="text-align:center;padding:20px;color:#aaa">読み込み中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 工事名検索 ===== -->
+  <div class="card">
+    <div class="card-title">🔍 工事名から根拠サイトを検索</div>
+
+    <div class="search-row">
+      <input id="searchInput" class="search-input" type="text"
+             placeholder="例：スレート屋根葺き替え、外壁塗装…"
+             onkeydown="if(event.key==='Enter') doSearch()" />
+      <button id="searchBtn" class="search-btn" onclick="doSearch()">検索</button>
+    </div>
+    <div class="search-hint">※「施工単価 費用 単価表」を自動付加してGoogle検索を別タブで開きます</div>
+  </div>
+
+</div>
+
+<footer>
+  火災保険損害鑑定 価格検索システム ｜ 価格は参考値（税抜）です。実際の損害額算定は専門鑑定人の判断に基づきます。
+</footer>
+
+<script>
+// ============================================================
+// 根拠サイト定義
+// ============================================================
+const SOURCES = {
+  yane_teigaku:    {name: "テイガク 屋根工事単価表（2026年）",             url: "https://yanekabeya.com/price/"},
+  yane_quick:      {name: "クイック屋根工事 屋根材別単価一覧",              url: "https://www.yanekouji.net/price_by_roofing_material-2/"},
+  yane_tbliki:     {name: "T-Bliki 屋根工事単価一覧（材料別・工法別）",    url: "https://t-bliki.com/roof-construction-unit_price/"},
+  yane_yukonavi:   {name: "ゆこーなび 屋根工事単価相場一覧",                url: "https://yuko-navi.com/roof-construction-unit-price"},
+  nurikae:         {name: "ヌリカエ 外壁塗装・塗料別㎡単価",                url: "https://www.nuri-kae.jp/column/construction-cost/152/"},
+  nurikae2:        {name: "ヌリカエ 塗装工程ごとの平米単価表",              url: "https://www.nuri-kae.jp/column/construction-cost/12294/"},
+  homepro_gaiheki: {name: "ホームプロ 外壁塗装リフォーム費用相場",          url: "https://www.homepro.jp/hiyou/gaiheki/kodate.html"},
+  sunada_tosou:    {name: "砂田塗装 外壁塗装単価表（塗料別・工程別）",      url: "https://www.sunadatosou.com/blog/exterior_wall_painting_unit_price-12465.html"},
+  suumo:           {name: "SUUMO リフォーム費用相場",                        url: "https://suumo.jp/remodel/soba/"},
+  renoco:          {name: "リノコ リフォーム費用・相場一覧",                 url: "https://www.renoco.jp/marketprice/"},
+  reshopnavi:      {name: "リショップナビ 工事別費用相場",                   url: "https://rehome-navi.com/articles/519"},
+  reshop_floor:    {name: "リショップナビ フローリング張替え費用相場",       url: "https://rehome-navi.com/articles/526"},
+  imitsu_cross:    {name: "アイミツ クロス張替え単価・費用相場",             url: "https://imitsu.jp/cost/interior-decorator/article/cross-strength"},
+  curama_tatami:   {name: "くらしのマーケット 畳張替え費用相場",             url: "https://curama.jp/tatami/magazine/437/"},
+  reshop_kaidan:   {name: "リショップナビ 階段リフォーム費用相場",           url: "https://rehome-navi.com/articles/193"},
+  reshop_mado:     {name: "リショップナビ 窓リフォーム費用相場",             url: "https://rehome-navi.com/articles/448"},
+  genkan_meister:  {name: "玄関ドアマイスター 玄関ドア交換費用相場",         url: "https://nakamura-genkan.com/cost"},
+  sunrefre_kyutoki:{name: "交換できるくん 給湯器交換費用相場",               url: "https://www.sunrefre.jp/gas/price/"},
+  curama_kyutoki:  {name: "くらしのマーケット 給湯器交換費用（工事込）",     url: "https://curama.jp/water-heater/magazine/1054/"},
+  reshop_toilet:   {name: "リショップナビ トイレリフォーム費用相場",         url: "https://rehome-navi.com/articles/113"},
+  reshop_bath:     {name: "リショップナビ 浴室リフォーム費用相場",           url: "https://rehome-navi.com/articles/95"},
+  reshop_kitchen:  {name: "リショップナビ キッチンリフォーム費用相場",       url: "https://rehome-navi.com/articles/70"},
+  curama_senmen:   {name: "くらしのマーケット 洗面台交換費用相場",           url: "https://curama.jp/bathroom-sink-cabinet-remodel/magazine/393/"},
+  sunrefre_aircon: {name: "交換できるくん エアコン取付工事費用相場",         url: "https://www.sunrefre.jp/aircon/price/"},
+  curama_aircon:   {name: "くらしのマーケット エアコン取付費用・追加工事",   url: "https://curama.jp/aircon-install/magazine/594/"},
+  denki_kankisen:  {name: "電気工事110番 換気扇交換費用相場",                url: "https://www.sharing-tech.co.jp/denki/fan-exchange-cost/"},
+  tanikou_sakan:   {name: "谷幸左官 材料・工法別 左官工事単価表",            url: "https://tani-kou.com/blog/%E5%B7%A6%E5%AE%98%E5%B7%A5%E4%BA%8B%E3%81%AE%E5%8D%98%E4%BE%A1%E3%81%AF%E3%81%A9%E3%81%AE%E3%81%8F%E3%82%89%E3%81%84%EF%BC%9F%E6%A5%AD%E8%80%85%E3%81%AE%E9%81%B8%E3%81%B3%E6%96%B9%E3%81%AE%E3%82%B3/"},
+  flooragent_sakan:{name: "フロアエージェント 左官工事価格一覧（㎡単価表）",  url: "https://www.fa-concrete.com/price_sakan.html"},
+  homepro_dannetsu:{name: "ホームプロ 断熱リフォーム費用相場",               url: "https://www.homepro.jp/dannetsu/dannetsu-basic/2542ca"},
+  kaitai_guide:    {name: "解体無料見積ガイド 解体費用・単価相場",           url: "https://www.kaitai-guide.net/costprice/"},
+  crassone:        {name: "クラッソーネ 家の解体費用相場（全国）",            url: "https://www.crassone.jp/price"},
+  anshin_kaitai:   {name: "あんしん解体 構造・地域別解体坪単価相場",          url: "https://anshin-kaitai.net/kaitai-souba/"},
+  crassone_asb:    {name: "クラッソーネ アスベスト除去費用相場",              url: "https://www.crassone.jp/faq/12773"},
+  assist_fence:    {name: "マーケティング情報局 外構フェンス費用（素材別・長さ別単価表）", url: "https://assist-all.co.jp/architecture_construction_column/20250514-4450/"},
+  hiroshima_reform: {name: "ヒロシマリフォーム 費用・工期一覧（内装・水廻り）",         url: "https://www.h-reform-zasshi.com/column/estimate/reffernce-cost1"},
+  hiroshima_reform2:{name: "ヒロシマリフォーム 費用・工期一覧（外構・屋根・外壁・窓）", url: "https://www.h-reform-zasshi.com/column/estimate/reffernce-cost2"},
+};
+
+// ============================================================
+// 標準施工単価テーブル
+// ============================================================
+const STANDARD_PRICES = {
+  "屋根工事": {
+    sources: ["yane_teigaku","yane_quick","hiroshima_reform2"],
+    items: [
+      {品目:"スレート屋根葺き替え（撤去込み）",    単位:"㎡", 下限:7000,   上限:12000,  備考:"既存スレート撤去・新規張替"},
+      {品目:"スレート屋根カバー工法",               単位:"㎡", 下限:5000,   上限:8000,   備考:"既存屋根上からカバー"},
+      {品目:"瓦屋根（陶器瓦）葺き替え",            単位:"㎡", 下限:12000,  上限:22000,  備考:"既存瓦撤去・新規陶器瓦"},
+      {品目:"金属屋根（ガルバリウム鋼板）立平葺き", 単位:"㎡", 下限:6000,   上限:10000,  備考:"立平葺き・横葺き"},
+      {品目:"アスファルトシングル葺き",             単位:"㎡", 下限:5500,   上限:9000,   備考:"輸入材使用"},
+      {品目:"防水シート（ルーフィング）貼り",       単位:"㎡", 下限:800,    上限:1500,   備考:"屋根防水下地"},
+      {品目:"棟板金交換",                           単位:"m",  下限:3500,   上限:6000,   備考:"ガルバリウム棟板金"},
+      {品目:"雨樋交換（軒樋）",                     単位:"m",  下限:2500,   上限:4500,   備考:"塩ビ・ガルバリウム製"},
+      {品目:"雨樋交換（竪樋）",                     単位:"m",  下限:2000,   上限:3500,   備考:"塩ビ製"},
+      {品目:"軒天（軒裏）張替え",                   単位:"㎡", 下限:3000,   上限:6000,   備考:"ケイカル板・軟質塩ビ"},
+    ],
+  },
+  "外壁工事": {
+    sources: ["nurikae","homepro_gaiheki","suumo"],
+    items: [
+      {品目:"外壁塗装（シリコン系）",               単位:"㎡", 下限:2500,   上限:4000,   備考:"下地処理・2回塗り"},
+      {品目:"外壁塗装（フッ素系）",                 単位:"㎡", 下限:3500,   上限:5500,   備考:"耐久性重視・長寿命"},
+      {品目:"外壁塗装（無機系）",                   単位:"㎡", 下限:4000,   上限:6500,   備考:"最高耐久グレード"},
+      {品目:"サイディング張替え（窯業系）",         単位:"㎡", 下限:7000,   上限:12000,  備考:"撤去・新規張替"},
+      {品目:"サイディングカバー工法",               単位:"㎡", 下限:5000,   上限:9000,   備考:"既存上からカバー"},
+      {品目:"金属サイディング張替え",               単位:"㎡", 下限:8000,   上限:15000,  備考:"ガルバリウム鋼板系"},
+      {品目:"モルタル外壁左官補修",                 単位:"㎡", 下限:3000,   上限:6000,   備考:"ひび割れ・剥落補修"},
+      {品目:"コーキング（シーリング）打替え",       単位:"m",  下限:800,    上限:1500,   備考:"窓周り・目地"},
+      {品目:"バルコニー防水（FRP）",                単位:"㎡", 下限:6000,   上限:10000,  備考:"トップコート含む"},
+      {品目:"バルコニー防水（ウレタン）",           単位:"㎡", 下限:4500,   上限:8000,   備考:"2層仕上げ"},
+      {品目:"タイル外壁補修（部分）",               単位:"㎡", 下限:8000,   上限:20000,  備考:"浮き・剥落補修"},
+    ],
+  },
+  "内装工事": {
+    sources: ["imitsu_cross","reshop_floor","curama_tatami","reshop_kaidan"],
+    items: [
+      {品目:"クロス張替え（普及品）",               単位:"㎡", 下限:1000,   上限:1800,   備考:"下地補修込み・6畳＝約30㎡"},
+      {品目:"クロス張替え（中・高級品）",           単位:"㎡", 下限:1500,   上限:3000,   備考:"輸入・機能性クロス"},
+      {品目:"天井クロス・塗装補修",                 単位:"㎡", 下限:1200,   上限:2500,   備考:"水染み・剥落補修"},
+      {品目:"フローリング張替え（複合）",           単位:"㎡", 下限:6000,   上限:10000,  備考:"撤去・新規張替"},
+      {品目:"フローリング張替え（無垢）",           単位:"㎡", 下限:10000,  上限:18000,  備考:"無垢材使用"},
+      {品目:"クッションフロア張替え",               単位:"㎡", 下限:2500,   上限:4500,   備考:"水廻り・脱衣所"},
+      {品目:"フロアタイル張替え",                   単位:"㎡", 下限:3500,   上限:6000,   備考:"塩ビタイル"},
+      {品目:"畳交換（表替え）",                     単位:"畳", 下限:4000,   上限:8000,   備考:"い草表替え"},
+      {品目:"畳交換（新畳）",                       単位:"畳", 下限:10000,  上限:20000,  備考:"藁床・スタイロ"},
+      {品目:"床下地合板補修",                       単位:"㎡", 下限:3000,   上限:5500,   備考:"腐食・劣化補修"},
+      {品目:"押入れ改修（クロス・棚板）",           単位:"箇所",下限:30000,  上限:80000,  備考:"内部全面改修"},
+    ],
+  },
+  "建具・サッシ工事": {
+    sources: ["reshop_mado","genkan_meister","hiroshima_reform"],
+    items: [
+      {品目:"アルミサッシ交換（引き違い窓）",       単位:"箇所",下限:80000,  上限:180000, 備考:"既存撤去・カバー工法"},
+      {品目:"樹脂サッシ交換",                       単位:"箇所",下限:100000, 上限:250000, 備考:"断熱性能向上"},
+      {品目:"複層ガラス（ペアガラス）交換",         単位:"枚", 下限:30000,  上限:80000,  備考:"サイズにより変動"},
+      {品目:"玄関ドア交換",                         単位:"箇所",下限:150000, 上限:400000, 備考:"カバー工法・電気錠含む"},
+      {品目:"室内ドア交換",                         単位:"枚", 下限:40000,  上限:120000, 備考:"既存撤去・新規設置"},
+      {品目:"引き戸交換（内装）",                   単位:"枚", 下限:35000,  上限:100000, 備考:"既存撤去・新規設置"},
+      {品目:"雨戸・シャッター交換",                 単位:"枚", 下限:50000,  上限:150000, 備考:"電動シャッター含む"},
+      {品目:"ガラス交換（単板）",                   単位:"枚", 下限:8000,   上限:30000,  備考:"割れ・ひび補修"},
+    ],
+  },
+  "塗装工事": {
+    sources: ["nurikae","nurikae2","sunada_tosou","homepro_gaiheki"],
+    items: [
+      {品目:"木部塗装（屋外・シリコン）",           単位:"㎡", 下限:1800,   上限:3500,   備考:"軒天・破風・木板塀"},
+      {品目:"木部塗装（屋内・造膜型）",             単位:"㎡", 下限:1500,   上限:3000,   備考:"建具・フローリング"},
+      {品目:"鉄部塗装（防錆塗料含む）",             単位:"㎡", 下限:2000,   上限:4000,   備考:"錆止め・上塗り2回"},
+      {品目:"屋根塗装（シリコン）",                 単位:"㎡", 下限:2000,   上限:3500,   備考:"高圧洗浄・縁切り込み"},
+      {品目:"屋根塗装（フッ素）",                   単位:"㎡", 下限:3000,   上限:5000,   備考:"高耐久グレード"},
+      {品目:"コンクリート・ブロック塀塗装",         単位:"㎡", 下限:1500,   上限:3000,   備考:"下地処理込み"},
+      {品目:"防腐・防虫処理（木部）",               単位:"㎡", 下限:800,    上限:2000,   備考:"床下・土台"},
+    ],
+  },
+  "左官・タイル工事": {
+    sources: ["tanikou_sakan","flooragent_sakan","renoco"],
+    items: [
+      {品目:"モルタル下地補修",                     単位:"㎡", 下限:2000,   上限:5000,   備考:"ひび割れ・浮き補修"},
+      {品目:"タイル張替え（浴室・水廻り）",         単位:"㎡", 下限:12000,  上限:25000,  備考:"撤去・新規張替"},
+      {品目:"タイル補修（部分・1枚）",              単位:"枚", 下限:3000,   上限:8000,   備考:"浮き・割れ補修"},
+      {品目:"外構ブロック積み（基礎込み）",         単位:"m",  下限:15000,  上限:30000,  備考:"CB積み・モルタル仕上"},
+      {品目:"土間コンクリート打設",                 単位:"㎡", 下限:8000,   上限:15000,  備考:"厚さ10cm・ワイヤーメッシュ"},
+      {品目:"玄関タイル張替え",                     単位:"㎡", 下限:10000,  上限:20000,  備考:"内玄関・外アプローチ"},
+      {品目:"漆喰・珪藻土塗り替え",                 単位:"㎡", 下限:3500,   上限:7000,   備考:"和室壁・塗り替え"},
+    ],
+  },
+  "断熱・防音工事": {
+    sources: ["homepro_dannetsu","renoco","reshopnavi"],
+    items: [
+      {品目:"床断熱材施工（グラスウール）",         単位:"㎡", 下限:2000,   上限:4500,   備考:"床下・根太間"},
+      {品目:"壁断熱材施工（吹付け）",               単位:"㎡", 下限:3000,   上限:7000,   備考:"硬質ウレタン吹付"},
+      {品目:"天井断熱材施工（グラスウール）",       単位:"㎡", 下限:1500,   上限:3500,   備考:"天井裏敷き込み"},
+      {品目:"内窓設置（インプラス等）",             単位:"箇所",下限:30000,  上限:80000,  備考:"既存窓の内側に設置"},
+      {品目:"防音壁・防音シート施工",               単位:"㎡", 下限:5000,   上限:15000,  備考:"防音材・遮音シート"},
+      {品目:"床防音マット施工",                     単位:"㎡", 下限:3000,   上限:8000,   備考:"集合住宅向け"},
+    ],
+  },
+  "給排水・衛生工事": {
+    sources: ["sunrefre_kyutoki","curama_kyutoki","reshop_bath","reshop_toilet","reshop_kitchen","curama_senmen"],
+    items: [
+      {品目:"給水管補修・交換（露出部分）",         単位:"m",  下限:5000,   上限:15000,  備考:"鋼管→塩ビ・ポリエチレン"},
+      {品目:"排水管補修・交換",                     単位:"m",  下限:4000,   上限:12000,  備考:"塩ビVP管"},
+      {品目:"浴室リフォーム（ユニットバス）",       単位:"式", 下限:600000, 上限:1500000,備考:"1616サイズ・工事込み"},
+      {品目:"洗面台交換（一般品）",                 単位:"台", 下限:80000,  上限:200000, 備考:"既存撤去・新規設置"},
+      {品目:"トイレ交換（温水洗浄便座）",           単位:"台", 下限:100000, 上限:250000, 備考:"タンクレス含む"},
+      {品目:"キッチン交換（I型・2.4m）",            単位:"式", 下限:400000, 上限:1000000,備考:"本体・工事費込み"},
+      {品目:"給湯器交換（16号ガス）",               単位:"台", 下限:80000,  上限:150000, 備考:"取付工事込み"},
+      {品目:"給湯器交換（エコキュート）",           単位:"台", 下限:250000, 上限:500000, 備考:"電気温水器"},
+      {品目:"止水栓・水栓金具交換",                 単位:"箇所",下限:10000,  上限:40000,  備考:"蛇口・シャワー等"},
+    ],
+  },
+  "電気工事": {
+    sources: ["sunrefre_aircon","curama_aircon","denki_kankisen"],
+    items: [
+      {品目:"エアコン取付（6畳用）",                単位:"台", 下限:70000,  上限:130000, 備考:"本体・標準工事込み"},
+      {品目:"エアコン取付（14畳用）",               単位:"台", 下限:120000, 上限:250000, 備考:"本体・標準工事込み"},
+      {品目:"換気扇交換（浴室・居室）",             単位:"台", 下限:15000,  上限:35000,  備考:"取付工事込み"},
+      {品目:"電気配線補修・引き直し",               単位:"m",  下限:3000,   上限:8000,   備考:"壁内配線・露出配線"},
+      {品目:"コンセント・スイッチ交換",             単位:"箇所",下限:5000,   上限:20000,  備考:"増設・移動含む"},
+      {品目:"分電盤交換",                           単位:"台", 下限:60000,  上限:150000, 備考:"漏電ブレーカー付"},
+      {品目:"照明器具交換（シーリング）",           単位:"台", 下限:8000,   上限:30000,  備考:"本体・取付工事込み"},
+      {品目:"太陽光パネル撤去・設置",               単位:"kW", 下限:100000, 上限:200000, 備考:"4kW標準工事"},
+    ],
+  },
+  "基礎・構造工事": {
+    sources: ["hiroshima_reform","renoco","reshopnavi"],
+    items: [
+      {品目:"基礎コンクリートひび割れ補修（エポキシ）",単位:"m",下限:3000,  上限:8000,   備考:"注入工法・表面処理"},
+      {品目:"基礎増打ち補強",                       単位:"m",  下限:20000,  上限:50000,  備考:"コンクリート増打"},
+      {品目:"床下鋼製束補強・交換",                 単位:"本", 下限:3000,   上限:8000,   備考:"既存木束→鋼製束"},
+      {品目:"土台補修・交換（腐食部分）",           単位:"m",  下限:15000,  上限:35000,  備考:"ヒノキ・ベイツガ"},
+      {品目:"柱・梁補強（金物補強）",               単位:"箇所",下限:10000,  上限:30000,  備考:"筋交い・金物"},
+      {品目:"耐震補強工事（壁補強1箇所）",          単位:"箇所",下限:100000, 上限:300000, 備考:"筋交い増設・構造合板"},
+      {品目:"床下防湿シート施工",                   単位:"㎡", 下限:1500,   上限:3500,   備考:"防湿フィルム敷き込み"},
+    ],
+  },
+  "木工事・造作": {
+    sources: ["hiroshima_reform","renoco","suumo"],
+    items: [
+      {品目:"大工手間（一般工事）",                 単位:"人工",下限:25000,  上限:40000,  備考:"大工1名1日"},
+      {品目:"棚板新設（可動棚）",                   単位:"箇所",下限:30000,  上限:80000,  備考:"棚柱・棚受け込み"},
+      {品目:"木製デッキ設置",                       単位:"㎡", 下限:30000,  上限:70000,  備考:"ウッドデッキ・ハードウッド"},
+      {品目:"天井張替え（石膏ボード）",             単位:"㎡", 下限:3000,   上限:6000,   備考:"既存撤去・新規張替"},
+      {品目:"間仕切り壁新設",                       単位:"㎡", 下限:10000,  上限:25000,  備考:"軽量鉄骨・石膏ボード"},
+      {品目:"階段補修・手すり設置",                 単位:"式", 下限:50000,  上限:200000, 備考:"踏み板・手すり"},
+      {品目:"パーティクルボード下地",               単位:"㎡", 下限:2000,   上限:4000,   備考:"床下地・構造用"},
+    ],
+  },
+  "解体・撤去・清掃": {
+    sources: ["kaitai_guide","crassone","anshin_kaitai","crassone_asb"],
+    items: [
+      {品目:"木造建物解体",                         単位:"㎡", 下限:25000,  上限:45000,  備考:"廃材処分費込み"},
+      {品目:"内装撤去（床・壁・天井）",             単位:"㎡", 下限:3000,   上限:6000,   備考:"廃材処分費込み"},
+      {品目:"焼損家財の搬出・処分",                 単位:"式", 下限:50000,  上限:200000, 備考:"規模による・産廃処分"},
+      {品目:"スス・臭気除去清掃（火災後専門清掃）", 単位:"㎡", 下限:2000,   上限:8000,   備考:"専門清掃業者・薬液処理"},
+      {品目:"仮設足場設置・撤去",                   単位:"㎡", 下限:700,    上限:1200,   備考:"建物外周面積"},
+      {品目:"産業廃棄物運搬・処分（混廃）",         単位:"t",  下限:40000,  上限:80000,  備考:"4t車1台分目安"},
+      {品目:"アスベスト含有材除去（レベル3）",      単位:"㎡", 下限:5000,   上限:15000,  備考:"封じ込め・除去工法"},
+      {品目:"給水・養生シート仮囲い",               単位:"㎡", 下限:500,    上限:1500,   備考:"仮設養生"},
+    ],
+  },
+  "外構・付帯工事": {
+    sources: ["assist_fence","hiroshima_reform2","suumo"],
+    items: [
+      {品目:"カーポート設置",                       単位:"台", 下限:150000, 上限:400000, 備考:"1台用・アルミ製"},
+      {品目:"ブロック塀補修・解体",                 単位:"m",  下限:5000,   上限:20000,  備考:"傾き・ひび割れ対応"},
+      {品目:"フェンス設置（アルミ）",               単位:"m",  下限:8000,   上限:25000,  備考:"基礎込み"},
+      {品目:"駐車場コンクリート舗装",               単位:"㎡", 下限:8000,   上限:15000,  備考:"厚さ10cm程度"},
+      {品目:"門扉交換",                             単位:"式", 下限:80000,  上限:250000, 備考:"両開き・電動含む"},
+      {品目:"植栽・庭石撤去",                       単位:"式", 下限:30000,  上限:150000, 備考:"規模による"},
+    ],
+  },
+};
+
+// ============================================================
+// カテゴリボタン生成
+// ============================================================
+function buildCatButtons() {
+  const container = document.getElementById('catBtns');
+  const allBtn = document.createElement('button');
+  allBtn.className = 'cat-btn active';
+  allBtn.textContent = 'すべて';
+  allBtn.onclick = () => loadCat('', allBtn);
+  container.appendChild(allBtn);
+
+  Object.keys(STANDARD_PRICES).forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn';
+    btn.textContent = cat;
+    btn.onclick = () => loadCat(cat, btn);
+    container.appendChild(btn);
+  });
+}
+
+// ============================================================
+// テーブル描画
+// ============================================================
+function loadCat(cat, btn) {
+  // ボタン状態更新
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const data = cat && STANDARD_PRICES[cat]
+    ? {[cat]: STANDARD_PRICES[cat]}
+    : STANDARD_PRICES;
+
+  // 根拠サイトリンク表示
+  const srcEl = document.getElementById('srcLinks');
+  const allSrcKeys = {};
+  Object.values(data).forEach(v => {
+    v.sources.forEach(k => { if (SOURCES[k]) allSrcKeys[k] = SOURCES[k]; });
+  });
+  srcEl.innerHTML = Object.entries(allSrcKeys).map(([k, s]) =>
+    `<a class="src-link" href="${s.url}" target="_blank" rel="noopener">${s.name}</a>`
+  ).join('');
+
+  // テーブル描画
+  const tbody = document.getElementById('stdBody');
+  const rows = [];
+  let total = 0;
+
+  for (const [catName, val] of Object.entries(data)) {
+    val.items.forEach(item => {
+      const minF = Number(item['下限']).toLocaleString();
+      const maxF = Number(item['上限']).toLocaleString();
+      rows.push(`
+        <tr>
+          <td><span class="cat-badge">${catName}</span></td>
+          <td>${item['品目']}</td>
+          <td style="text-align:center">${item['単位']}</td>
+          <td class="price-val">¥${minF}</td>
+          <td class="price-val">¥${maxF}</td>
+          <td class="note-cell">${item['備考']}</td>
+        </tr>`);
+      total++;
+    });
+  }
+  tbody.innerHTML = rows.join('');
+  document.getElementById('statLabel').textContent = total + '件表示中';
+}
+
+// ============================================================
+// 工事名検索（Google別タブで開く）
+// ============================================================
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  const fullQuery = q + ' 施工単価 費用 単価表';
+  window.open('https://www.google.com/search?q=' + encodeURIComponent(fullQuery), '_blank', 'noopener');
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+buildCatButtons();
+loadCat('', document.querySelector('.cat-btn'));
+</script>
+</body>
+</html>
